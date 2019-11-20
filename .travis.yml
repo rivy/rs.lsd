@@ -1,3 +1,4 @@
+# spell-checker:ignore MSVC clippy gnueabihf musl repo rustup Peltoche
 language: rust
 cache: cargo
 sudo: required
@@ -21,6 +22,9 @@ matrix:
     - os: osx
       rust: stable
       env: TARGET=x86_64-apple-darwin
+    - os: windows
+      rust: stable
+      env: TARGET=i686-pc-windows-msvc
     - os: linux
       rust: stable
       env:
@@ -115,5 +119,3 @@ deploy:
 notifications:
   email:
     on_success: never
-
-
