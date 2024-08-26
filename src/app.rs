@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
 use clap::{ArgAction, Parser, ValueHint};
+use git_version::git_version;
 
 #[derive(Debug, Parser)]
-#[command(about, version, args_override_self = true, disable_help_flag = true)]
+#[clap(version = git_version!(args = [ "--abbrev=40", "--tags", "--dirty=+", "--broken=?", "--exclude=[!vV0-9]", "--match=[0-9]*", "--match=[vV][0-9]*" ]))]
+#[command(about, args_override_self = true, disable_help_flag = true)]
 pub struct Cli {
     #[arg(value_name = "FILE", default_value = ".", value_hint = ValueHint::AnyPath)]
     pub inputs: Vec<PathBuf>,
