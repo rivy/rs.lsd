@@ -46,7 +46,7 @@ impl Theme {
         let real = if let Some(path) = config_file::expand_home(file) {
             path
         } else {
-            print_error!("Not a valid theme file path: {}.", &file);
+            print_error!("Not a valid theme file path: {}", &file);
             return Err(Error::InvalidPath(file.to_string()));
         };
 

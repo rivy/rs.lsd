@@ -140,7 +140,7 @@ impl Config {
                 Ok(c) => Some(c),
                 Err(e) => {
                     print_error!(
-                        "Configuration file {} format error, {}.",
+                        "Configuration file {} format error: {}",
                         file.to_string_lossy(),
                         e
                     );
@@ -149,11 +149,7 @@ impl Config {
             },
             Err(e) => {
                 if e.kind() != io::ErrorKind::NotFound {
-                    print_error!(
-                        "Can not open config file {}: {}.",
-                        file.to_string_lossy(),
-                        e
-                    );
+                    print_error!("Can not open config file {}: {}", file.to_string_lossy(), e);
                 }
                 None
             }

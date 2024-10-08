@@ -87,7 +87,11 @@ impl Meta {
         let entries = match self.path.read_dir() {
             Ok(entries) => entries,
             Err(err) => {
-                print_error!("{}: {}.", self.path.display(), err);
+                print_error!(
+                    "{}: unable to read directory entries ({})",
+                    self.path.display(),
+                    err
+                );
                 return Ok((None, ExitCode::MinorIssue));
             }
         };
@@ -151,7 +155,11 @@ impl Meta {
             {
                 Ok(res) => res,
                 Err(err) => {
-                    print_error!("{}: {}.", path.display(), err);
+                    print_error!(
+                        "{}: Unable to read entry metadata from path ({})",
+                        path.display(),
+                        err
+                    );
                     exit_code.set_if_greater(ExitCode::MinorIssue);
                     continue;
                 }
@@ -173,7 +181,11 @@ impl Meta {
                         exit_code.set_if_greater(rec_exit_code);
                     }
                     Err(err) => {
-                        print_error!("{}: {}.", path.display(), err);
+                        print_error!(
+                            "{}: Unable to read linked metadata ({})",
+                            path.display(),
+                            err
+                        );
                         exit_code.set_if_greater(ExitCode::MinorIssue);
                         continue;
                     }
@@ -220,7 +232,7 @@ impl Meta {
         let metadata = match metadata {
             Ok(meta) => meta,
             Err(err) => {
-                print_error!("{}: {}.", path.display(), err);
+                print_error!("{}: Unable to read metadata ({})", path.display(), err);
                 return 0;
             }
         };
@@ -233,7 +245,11 @@ impl Meta {
             let entries = match path.read_dir() {
                 Ok(entries) => entries,
                 Err(err) => {
-                    print_error!("{}: {}.", path.display(), err);
+                    print_error!(
+                        "{}: Unable to read directory entries ({})",
+                        path.display(),
+                        err
+                    );
                     return size;
                 }
             };
@@ -241,7 +257,11 @@ impl Meta {
                 let path = match entry {
                     Ok(entry) => entry.path(),
                     Err(err) => {
-                        print_error!("{}: {}.", path.display(), err);
+                        print_error!(
+                            "{}: Unable to read directory entry ({})",
+                            path.display(),
+                            err
+                        );
                         continue;
                     }
                 };
@@ -275,7 +295,11 @@ impl Meta {
                     // path.symlink_metadata would have errored out
                     if dereference {
                         broken_link = true;
-                        eprintln!("lsd: {}: {}", path.to_str().unwrap_or(""), e);
+                        print_error!(
+                            "{}: Unable to read symlink destination metadata {}",
+                            path.to_str().unwrap_or(""),
+                            e
+                        );
                     }
                 }
             }
@@ -307,8 +331,8 @@ impl Meta {
                     Some(PermissionsOrAttributes::Permissions(permissions)),
                 ),
                 Err(e) => {
-                    eprintln!(
-                        "lsd: {}: {}(Hint: Consider using `--permission disable`.)",
+                    print_error!(
+                        "{}: {}(Hint: Consider using `--permission disable`.)",
                         path.to_str().unwrap_or(""),
                         e
                     );

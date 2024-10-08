@@ -160,7 +160,7 @@ impl Configurable<Self> for Blocks {
             for b in c.iter() {
                 match Block::try_from(b.as_str()) {
                     Ok(block) => blocks.push(block),
-                    Err(err) => print_error!("{}.", err),
+                    Err(err) => print_error!("{}", err),
                 }
             }
             if blocks.is_empty() {

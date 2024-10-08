@@ -122,7 +122,7 @@ impl Name {
                             // https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
                             format!("\x1B]8;;{url}\x1B\x5C{name}\x1B]8;;\x1B\x5C")
                         } else {
-                            print_error!("{}: unable to form url.", name);
+                            print_error!("{}: unable to form url", name);
                             name
                         }
                     }
@@ -130,7 +130,7 @@ impl Name {
                         // If the error is NotFound, it just means the file is a broken symlink.
                         // That is not an error, and the user is already warned that the symlink is broken by the colors.
                         if err.kind() != std::io::ErrorKind::NotFound {
-                            print_error!("{}: {}", name, err);
+                            print_error!("{}: hyperlink generation error ({})", name, err);
                         }
                         name
                     }
