@@ -177,7 +177,7 @@ fn inner_display_grid(
             }
 
             let display_option = DisplayOption::Relative {
-                base_path: &meta.path,
+                base_path: &meta.path_verbatim,
             };
 
             output += &inner_display_grid(
