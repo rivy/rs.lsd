@@ -278,6 +278,7 @@ impl Meta {
         dereference: bool,
         permission_flag: PermissionFlag,
     ) -> io::Result<Self> {
+        // let path_verbatim = to_path_verbatim(&path)?; // convert CON or ./CON to \\?\C:\...\CON, ...
         let mut metadata = path.symlink_metadata()?;
         let mut symlink_meta = None;
         let mut broken_link = false;
