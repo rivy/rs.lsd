@@ -120,7 +120,11 @@ impl Core {
             let mut meta = match Meta::from_path(&path, dereference, self.flags.permission) {
                 Ok(meta) => meta,
                 Err(err) => {
-                    print_error!("{}: {}.", path.display(), err);
+                    print_error!(
+                        "{}: Unable to read metadata from path ({})",
+                        path.canonicalize().unwrap_or(path).display(),
+                        err
+                    );
                     exit_code.set_if_greater(ExitCode::MajorIssue);
                     continue;
                 }
@@ -143,7 +147,7 @@ impl Core {
                         exit_code.set_if_greater(path_exit_code);
                     }
                     Err(err) => {
-                        print_error!("lsd: {}: {}\n", path.display(), err);
+                        print_error!("{}: Unable to read contents ({})", path.display(), err);
                         exit_code.set_if_greater(ExitCode::MinorIssue);
                         continue;
                     }

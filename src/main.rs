@@ -75,7 +75,7 @@ macro_rules! print_error {
                 let mut handle = stderr.lock();
                 // We can write on stderr, so we simply ignore the error and don't print
                 // and stop with success.
-                let res = handle.write_all(std::format!("lsd: {}\n\n",
+                let res = handle.write_all(std::format!("lsd: {}\n",
                                                         std::format!($($arg)*)).as_bytes());
                 if res.is_err() {
                     std::process::exit(0);
