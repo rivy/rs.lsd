@@ -45,6 +45,7 @@ use self::windows_attributes::get_attributes;
 pub struct Meta {
     pub name: Name,
     pub path: PathBuf,
+    pub path_verbatim: PathBuf,
     pub permissions_or_attributes: Option<PermissionsOrAttributes>,
     pub date: Option<Date>,
     pub owner: Option<Owner>,
@@ -57,6 +58,131 @@ pub struct Meta {
     pub content: Option<Vec<Meta>>,
     pub access_control: Option<AccessControl>,
     pub git_status: Option<GitFileStatus>,
+}
+
+fn is_win_device_name(path: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        // use std::ffi::OsStr;
+        // use std::os::windows::ffi::OsStrExt;
+
+        // let path = path.as_os_str().encode_wide().collect::<Vec<u16>>();
+        // let path = OsStr::from_wide(&path);
+        //path.to_string_lossy().starts_with("\\\\.\\")
+        path.starts_with("//./")
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+#[derive(Default)]
+pub struct Options {
+    pub file_stem_may_match: bool,
+}
+
+pub fn is_win_os_device_name(path: &str, options: Option<Options>) -> bool {
+    // spell-checker:ignore (shell/win) CONIN CONOUT
+    // Check if the OS is Windows
+    #[cfg(not(target_os = "windows"))]
+    {
+        return false;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::ffi::OsStr;
+        use std::path::Path;
+
+        if path.is_empty() {
+            return false;
+        }
+
+        let options = options.unwrap_or_else(|| Options {
+            file_stem_may_match: true,
+        });
+        let file_stem_may_match = options.file_stem_may_match;
+
+        let special_device_base_names = ["CONIN$", "CONOUT$"];
+        let special_device_stem_names = [
+            "CON", "PRN", "AUX", "NUL", // legacy device names
+            "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+            "COM9", // legacy COM device names
+            "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
+            "LPT9", // legacy LPT device names
+        ];
+
+        let path = Path::new(path);
+        let file_base_name = path
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("")
+            .to_uppercase();
+        let file_stem = path
+            .file_stem()
+            .and_then(OsStr::to_str)
+            .unwrap_or("")
+            .to_uppercase();
+
+        let match_found = special_device_base_names.contains(&file_base_name.as_str())
+            || special_device_stem_names.contains(&file_base_name.as_str())
+            || (file_stem_may_match && special_device_stem_names.contains(&file_stem.as_str()));
+
+        return match_found;
+    }
+}
+
+// fn into_platform_path(path: &Path) -> io::Result<PathBuf> {
+//     if is_win_device_name(path) {
+//         return Ok(path.to_path_buf());
+//     }
+
+//     let path = path.canonicalize()?;
+//     Ok(path)
+// }
+
+pub fn into_platform_path(path: Option<String>) -> Option<String> {
+    use regex::Regex;
+
+    if path.is_none() {
+        return None;
+    }
+
+    let mut path = path.unwrap();
+
+    // Check if the OS is Windows
+    if cfg!(not(target_os = "windows")) {
+        return Some(path);
+    }
+
+    // Decode any device path of the form '\\.\?\...' back into the standard '\\?\...' path
+    let re = Regex::new(r"^([/\\][/\\])[.][/\\][?]([/\\])").unwrap();
+    path = re.replace(&path, "$1?$2").to_string();
+
+    // Handle special device paths
+    if !Regex::new(r"^[/\\][/\\][.?][/\\]").unwrap().is_match(&path) {
+        if is_win_os_device_name(
+            &path,
+            Some(Options {
+                file_stem_may_match: true,
+            }),
+        ) {
+            let resolved_path = std::path::absolute(&path).unwrap();
+            path = format!(r"\\?\{}", resolved_path.display());
+        }
+    }
+
+    // Replace '\\?\...' with '\\.\' for better compatibility
+    let re = Regex::new(r"^[/\\][/\\][.?][/\\]").unwrap();
+    path = re.replace(&path, r"\\.\").to_string();
+
+    Some(path)
+}
+
+fn into_path_verbatim(path: &Path) -> io::Result<PathBuf> {
+    let path_verbatim = into_platform_path(path);
+    Ok(path_verbatim)
 }
 
 impl Meta {
@@ -278,7 +404,14 @@ impl Meta {
         dereference: bool,
         permission_flag: PermissionFlag,
     ) -> io::Result<Self> {
-        // let path_verbatim = to_path_verbatim(&path)?; // convert CON or ./CON to \\?\C:\...\CON, ...
+        // convert CON or ./CON to \\?\C:\...\CON, ...
+        //... ref: <https://chrisdenton.github.io/omnipath> @@ <https://archive.is/bUwHG>
+        //... ref: <https://github.com/rivy-t/rs.omnipath> , <https://github.com/ChrisDenton/omnipath>
+        // ref: [File path formats](https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats) @@ <https://archive.is/0shPL>
+        // ref: [Naming Files, Paths, and Namespaces](https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file) @@ <https://archive.is/mQOTg>
+        // ref: [WinOS Paths](https://chrisdenton.github.io/omnipath/print.html) @@ <https://archive.is/90Elx>
+        let path_verbatim = into_path_verbatim(&path)?;
+
         let mut metadata = path.symlink_metadata()?;
         let mut symlink_meta = None;
         let mut broken_link = false;
@@ -372,6 +505,7 @@ impl Meta {
             inode,
             links,
             path: path.to_path_buf(),
+            path_verbatim: path_verbatim.to_path_buf(),
             symlink: SymLink::from(path),
             size,
             date,

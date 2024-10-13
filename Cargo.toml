@@ -48,6 +48,8 @@ serde_yaml = "0.9"
 url = "2.1"
 vsort = "0.2"
 xdg = "2.5"
+#
+regex = "1.6"
 
 [target."cfg(not(all(windows, target_arch = \"x86\", target_env = \"gnu\")))".dependencies]
 # if ssl feature is enabled compilation will fail on arm-unknown-linux-gnueabihf and i686-pc-windows-gnu
