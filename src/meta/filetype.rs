@@ -56,8 +56,12 @@ impl FileType {
     }
 
     #[cfg(windows)]
-    pub fn new(meta: &Metadata, symlink_meta: Option<&Metadata>, path: &std::path::Path) -> Self {
+    pub fn new(meta: &Metadata, deref_meta: Option<&Metadata>, path: &std::path::Path) -> Self {
         let file_type = meta.file_type();
+        // eprintln!(
+        //     "FileType::new\n~ path: {:#?}\n ~ meta: {:#?}\n~ deref_meta: {:#?}",
+        //     path, meta, deref_meta
+        // );
 
         if file_type.is_file() {
             let exec = path
@@ -75,7 +79,7 @@ impl FileType {
         } else if file_type.is_symlink() {
             FileType::SymLink {
                 // if broken, defaults to false
-                is_dir: symlink_meta.map(|m| m.is_dir()).unwrap_or_default(),
+                is_dir: deref_meta.map(|m| m.is_dir()).unwrap_or_default(),
             }
         } else {
             FileType::Special

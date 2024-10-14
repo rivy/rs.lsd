@@ -4,9 +4,14 @@ use crate::icon::Icons;
 use crate::meta::filetype::FileType;
 use crate::print_error;
 use crate::url::Url;
+
+use crate::meta::utils;
+
+// use lazy_static::lazy_static;
 use std::cmp::{Ordering, PartialOrd};
 use std::ffi::OsStr;
-use std::path::{Component, Path, PathBuf};
+// use std::io;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum DisplayOption<'a> {
@@ -49,33 +54,11 @@ impl Name {
             .unwrap_or(&self.name)
     }
 
-    fn relative_path<T: AsRef<Path> + Clone>(&self, base_path: T) -> PathBuf {
-        let base_path = base_path.as_ref();
-
-        if self.path == base_path {
-            return PathBuf::from(AsRef::<Path>::as_ref(&Component::CurDir));
-        }
-
-        let shared_components: PathBuf = self
-            .path
-            .components()
-            .zip(base_path.components())
-            .take_while(|(target_component, base_component)| target_component == base_component)
-            .map(|tuple| tuple.0)
-            .collect();
-
-        base_path
-            .strip_prefix(&shared_components)
-            .unwrap()
-            .components()
-            .map(|_| Component::ParentDir)
-            .chain(
-                self.path
-                    .strip_prefix(&shared_components)
-                    .unwrap()
-                    .components(),
-            )
-            .collect()
+    fn relative_path<P>(&self, base_path: P) -> PathBuf
+    where
+        P: AsRef<Path>,
+    {
+        return utils::relative_path(&self.path, base_path);
     }
 
     fn escape(&self, string: &str, literal: bool) -> String {
@@ -173,6 +156,10 @@ impl Name {
                 )
             ),
         };
+        // eprintln!(
+        //     "Name::render\n~ self: {:#?}\n~ display_option: {:#?}\n~ literal: {:#?}\n~ content: {:#?}",
+        //     &self, display_option, literal, content
+        // );
 
         let elem = match self.file_type {
             FileType::CharDevice => Elem::CharDevice,

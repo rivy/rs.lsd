@@ -12,6 +12,7 @@ mod permissions;
 mod permissions_or_attributes;
 mod size;
 mod symlink;
+mod utils;
 
 #[cfg(windows)]
 mod windows_attributes;
@@ -277,49 +278,16 @@ impl Meta {
         }
     }
 
-    pub fn into_verbatim_path<P>(path: P) -> io::Result<PathBuf>
-    where
-        P: AsRef<Path>,
-    {
-        // convert path to a verbatim format (`\\?\...`), avoiding rust std library mis-handling of files resembling device paths
-        // * eg, `CON` or `./CON` is translated to `\\?\C:\...\CON` instead of `\\.\CON`
-
-        // ref: [File path formats](https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats) @@ <https://archive.is/0shPL>
-        // ref: [Naming Files, Paths, and Namespaces](https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file) @@ <https://archive.is/mQOTg>
-        // ref: [WinOS Paths](https://chrisdenton.github.io/omnipath/print.html) @@ <https://archive.is/90Elx>
-        //... ref: <https://github.com/rivy-t/rs.omnipath> , <https://github.com/ChrisDenton/omnipath>
-
-        let path = path.as_ref();
-        let path_protected = path.join(".");
-        let absolute_path = std::path::absolute(path_protected)?;
-
-        // avoid forcing verbatim prefix onto paths that already have it
-        match absolute_path.components().nth(0) {
-            Some(Component::Prefix(c)) if c.kind().is_verbatim() => {
-                return Ok(absolute_path);
-            }
-            _ => {}
-        };
-
-        // add verbatim prefix (`\\?\`) to path
-        // * an intermediary OsString is used to avoid `PathBuf::push()` logic which will otherwise overwrite the prefix with a subsequent absolute path
-        let mut verbatim_path_os = std::ffi::OsString::from(r"\\?\");
-        verbatim_path_os.push(absolute_path.as_os_str());
-        let verbatim_path = std::path::PathBuf::from(verbatim_path_os);
-        // eprintln!("into_verbatim_path() ~ verbatim_path: {:#?}", verbatim_path);
-        return Ok(verbatim_path);
-    }
-
     pub fn from_path(
         path: &Path,
         dereference: bool,
         permission_flag: PermissionFlag,
     ) -> io::Result<Self> {
-        let path_verbatim = Self::into_verbatim_path(path)?;
+        let path_verbatim = utils::to_verbatim_path(path)?;
         // eprintln!("from_path() ~ path_verbatim: {:#?}", path_verbatim);
         let mut metadata = path_verbatim.symlink_metadata()?;
         // eprintln!("from_path() ~ metadata: {:#?}", metadata);
-        let mut symlink_meta = None;
+        let mut deref_metadata = None;
         let mut broken_link = false;
         if metadata.file_type().is_symlink() {
             match path_verbatim.metadata() {
@@ -327,7 +295,7 @@ impl Meta {
                     if dereference {
                         metadata = m;
                     } else {
-                        symlink_meta = Some(m);
+                        deref_metadata = Some(m);
                     }
                 }
                 Err(e) => {
@@ -384,12 +352,12 @@ impl Meta {
         #[cfg(not(windows))]
         let file_type = FileType::new(
             &metadata,
-            symlink_meta.as_ref(),
+            deref_metadata.as_ref(),
             &permissions.unwrap_or_default(),
         );
 
         #[cfg(windows)]
-        let file_type = FileType::new(&metadata, symlink_meta.as_ref(), path);
+        let file_type = FileType::new(&metadata, deref_metadata.as_ref(), path);
 
         let name = Name::new(path, file_type);
 

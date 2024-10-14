@@ -11,44 +11,35 @@ pub struct SymLink {
 
 impl From<&Path> for SymLink {
     fn from(path: &Path) -> Self {
-        if let Ok(target) = read_link(path) {
-            if target.is_absolute() || path.parent().is_none() {
-                return Self {
-                    valid: target.exists(),
-                    target: Some(
-                        target
-                            .to_str()
-                            .expect("failed to convert symlink to str")
-                            .to_string(),
-                    ),
-                };
-            }
-
-            return Self {
-                target: Some(
-                    target
-                        .to_str()
-                        .expect("failed to convert symlink to str")
-                        .to_string(),
-                ),
-                valid: path.parent().unwrap().join(target).exists(),
-            };
-        }
-
-        Self {
-            target: None,
-            valid: false,
+        match Self::try_from(path) {
+            Ok(symlink) => symlink,
+            Err(_) => Self {
+                target: None,
+                valid: false,
+            },
         }
     }
 }
 
 impl SymLink {
-    pub fn symlink_string(&self) -> Option<String> {
-        self.target.as_ref().map(|target| target.to_string())
+    pub fn symlink_string(&self, file_name: &String) -> Option<String> {
+        let prefix = match file_name.as_str() {
+            "." => format!("..{}", std::path::MAIN_SEPARATOR),
+            ".." => format!(
+                "..{}..{}",
+                std::path::MAIN_SEPARATOR,
+                std::path::MAIN_SEPARATOR
+            ),
+            _ => format!(""),
+        };
+        self.target
+            .as_ref()
+            .map(|target| format!("{}{}", prefix, target.to_string()))
     }
 
-    pub fn render(&self, colors: &Colors, flag: &Flags) -> ColoredString {
-        if let Some(target_string) = self.symlink_string() {
+    pub fn render(&self, colors: &Colors, flag: &Flags, file_name: &String) -> ColoredString {
+        // eprintln!("SymLink::render\n ~ self: {:#?}", self,);
+        if let Some(target_string) = self.symlink_string(file_name) {
             let elem = if self.valid {
                 &Elem::SymLink
             } else {
@@ -69,6 +60,50 @@ impl SymLink {
         } else {
             ColoredString::new(Colors::default_style(), "".into())
         }
+    }
+
+    fn try_from(path: &Path) -> std::io::Result<Self> {
+        if let Ok(target) = read_link(path) {
+            // eprintln!(
+            //     "SymLink::From\n~ target: {:#?} of path: {:#?}",
+            //     // "SymLink::From ~ target: {:#?} of path: {:#?}\n* components: {:#?}",
+            //     target,
+            //     path,
+            //     // path.components()
+            // );
+            if target.is_absolute() {
+                return Ok(Self {
+                    target: Some(
+                        target
+                            .to_str()
+                            .expect("failed to convert symlink to str")
+                            .to_string(),
+                    ),
+                    valid: target.exists(),
+                });
+            }
+
+            let path_verbatim = crate::meta::utils::to_verbatim_path(&path)?;
+            let parent = path_verbatim
+                .parent()
+                .expect("failed to get parent of path for symlink");
+            let final_target = parent.join(&target);
+            let valid = final_target.exists();
+            let t = crate::meta::utils::relative_path(&final_target, &parent);
+            let target = Some(
+                t.to_str()
+                    .expect("failed to convert symlink to str")
+                    .to_string(),
+            );
+            // eprintln!("SymLink::From\n~ path: {:#?}\n~ path_verbatim: {:#?}\n~ parent: {:#?}\n~ target: {:#?}\n~ final_target: {:#?}\n~ valid: {:#?}\n ~ t: {:#?}", path, path_verbatim, parent, target, final_target, valid, t);
+
+            return Ok(Self { target, valid });
+        }
+
+        Ok(Self {
+            target: None,
+            valid: false,
+        })
     }
 }
 
