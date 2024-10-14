@@ -12,7 +12,13 @@ pub struct SymLink {
 impl From<&Path> for SymLink {
     fn from(path: &Path) -> Self {
         if let Ok(target) = read_link(path) {
-            if target.is_absolute() || path.parent().is_none() {
+            eprintln!(
+                "SymLink::From ~ target: {:#?} of path: {:#?}\n* components: {:#?}",
+                target,
+                path,
+                path.components()
+            );
+            if target.is_absolute() {
                 return Self {
                     valid: target.exists(),
                     target: Some(
@@ -24,14 +30,37 @@ impl From<&Path> for SymLink {
                 };
             }
 
+            eprintln!("SymLink::From ~ path.parent(): {:#?}", path.parent());
+            eprintln!(
+                "SymLink::From ~ path.parent(): {:#?}",
+                std::path::absolute(path).unwrap().parent()
+            );
+            let parent = match path.parent() {
+                Some(p) => match path.as_os_str().to_str() {
+                    Some(".") => std::path::Path::new(".."),
+                    Some("..") => std::path::Path::new("../.."),
+                    _ => p,
+                },
+                None => path,
+            };
+            eprintln!("SymLink::From ~ parent: {:#?}", parent);
             return Self {
-                target: Some(
-                    target
-                        .to_str()
-                        .expect("failed to convert symlink to str")
-                        .to_string(),
-                ),
-                valid: path.parent().unwrap().join(target).exists(),
+                target: match path.as_os_str().to_str() {
+                    Some(".") | Some("..") => Some(
+                        parent
+                            .join(&target)
+                            .to_str()
+                            .expect("failed to convert symlink to str")
+                            .to_string(),
+                    ),
+                    _ => Some(
+                        target
+                            .to_str()
+                            .expect("failed to convert symlink to str")
+                            .to_string(),
+                    ),
+                },
+                valid: parent.join(&target).exists(),
             };
         }
 
