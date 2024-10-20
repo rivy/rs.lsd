@@ -101,9 +101,7 @@ impl Meta {
 
         let mut content: Vec<Meta> = Vec::new();
 
-        if matches!(flags.display, Display::All | Display::SystemProtected)
-            && flags.layout != Layout::Tree
-        {
+        if matches!(flags.display, Display::All) && flags.layout != Layout::Tree {
             let mut current_meta = self.clone();
             ".".clone_into(&mut current_meta.name.name);
 
@@ -147,8 +145,6 @@ impl Meta {
             let is_system = false;
 
             match flags.display {
-                // show hidden files, but ignore system protected files
-                Display::All | Display::AlmostAll if is_system => continue,
                 // ignore hidden and system protected files
                 Display::VisibleOnly if is_hidden || is_system => continue,
                 _ => {}

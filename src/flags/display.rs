@@ -12,8 +12,6 @@ use serde::Deserialize;
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum Display {
-    /// windows only, used to show files with system protected flag
-    SystemProtected,
     All,
     AlmostAll,
     DirectoryOnly,
@@ -34,12 +32,6 @@ impl Configurable<Self> for Display {
             Some(Self::AlmostAll)
         } else if cli.all {
             Some(Self::All)
-        } else if cli.system_protected {
-            #[cfg(windows)]
-            return Some(Self::SystemProtected);
-
-            #[cfg(not(windows))]
-            return Some(Self::All);
         } else {
             None
         }
@@ -73,16 +65,16 @@ mod test {
         assert_eq!(None, Display::from_cli(&cli));
     }
 
-    #[test]
-    fn test_from_cli_system_protected() {
-        let argv = ["lsd", "--system-protected"];
-        let cli = Cli::try_parse_from(argv).unwrap();
-        #[cfg(windows)]
-        assert_eq!(Some(Display::SystemProtected), Display::from_cli(&cli));
-
-        #[cfg(not(windows))]
-        assert_eq!(Some(Display::All), Display::from_cli(&cli));
-    }
+    // #[test]
+    // fn test_from_cli_system_protected() {
+    //     let argv = ["lsd", "--system-protected"];
+    //     let cli = Cli::try_parse_from(argv).unwrap();
+    //     #[cfg(windows)]
+    //     assert_eq!(Some(Display::SystemProtected), Display::from_cli(&cli));
+    //
+    //     #[cfg(not(windows))]
+    //     assert_eq!(Some(Display::All), Display::from_cli(&cli));
+    // }
 
     #[test]
     fn test_from_cli_all() {

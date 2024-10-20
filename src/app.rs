@@ -186,11 +186,11 @@ pub struct Cli {
     #[arg(long, value_name = "STR")]
     pub truncate_owner_marker: Option<String>,
 
-    /// Includes files with the windows system protection flag set.
-    /// This is the same as --all on other platforms
-    #[arg(long, hide = !cfg!(windows))]
-    pub system_protected: bool,
-
+    // /// Includes files with the windows system protection flag set.
+    // /// This is the same as --all on other platforms
+    // #[arg(long, hide = !cfg!(windows))]
+    // pub system_protected: bool,
+    
     /// Print entry names without quoting
     #[arg(short = 'N', long)]
     pub literal: bool,
