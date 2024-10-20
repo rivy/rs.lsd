@@ -409,10 +409,7 @@ fn get_output(
                     ),
                     meta.indicator.render(flags),
                 ]);
-                if !(meta.dereferenced
-                    || flags.no_symlink.0
-                    || flags.dereference.0
-                    || flags.layout == Layout::Grid)
+                if !(/* meta.dereferenced || */flags.no_symlink.0 || flags.dereference.0 || flags.layout == Layout::Grid)
                 {
                     block_vec.push(meta.symlink_initial.render(colors, flags, &meta.name.name))
                 }
