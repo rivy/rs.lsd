@@ -130,7 +130,8 @@ mod tests {
             format!("{}", " ⇒ /target"),
             link.render(
                 &Colors::new(ThemeOption::NoColor),
-                &Flags::configure_from(&cli, &Config::with_none()).unwrap()
+                &Flags::configure_from(&cli, &Config::with_none()).unwrap(),
+                &String::from("")
             )
             .to_string()
         );
@@ -148,7 +149,8 @@ mod tests {
             format!("{}", " ⇒ /target"),
             link.render(
                 &Colors::new(ThemeOption::NoColor),
-                &Flags::configure_from(&cli, &Config::with_none()).unwrap()
+                &Flags::configure_from(&cli, &Config::with_none()).unwrap(),
+                &String::from("")
             )
             .to_string()
         );
@@ -166,7 +168,8 @@ mod tests {
             format!("{}", " ⇒ \u{1b}[38;5;124m/target\u{1b}[39m"),
             link.render(
                 &Colors::new(ThemeOption::NoLscolors),
-                &Flags::configure_from(&cli, &Config::with_none()).unwrap()
+                &Flags::configure_from(&cli, &Config::with_none()).unwrap(),
+                &String::from("")
             )
             .to_string()
         );
