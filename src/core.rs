@@ -116,7 +116,7 @@ impl Core {
             .collect();
 
         for path in paths {
-            let dereference = (path == PathBuf::from(".")) || self.flags.dereference.0;
+            let dereference = true; // ToDO: [2024-10-20; rivy] add more complete deref options ~ derefCmdLine, derefCmdLineDirs, derefAll, derefNone
             let mut meta = match Meta::from_path(&path, dereference, self.flags.permission) {
                 Ok(meta) => meta,
                 Err(err) => {
