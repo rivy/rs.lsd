@@ -41,6 +41,7 @@ where
     }
 
     let absolute_path = to_absolute_path(path)?;
+    // eprintln!("to_verbatim_path() ~ absolute_path: {:#?}", absolute_path);
 
     // not needed? ~ `std::path::absolute()` should already never return a de-novo verbatim path
     // // avoid forcing verbatim prefix onto paths that already have it
@@ -54,7 +55,22 @@ where
     // add verbatim prefix (`\\?\`) to path
     // * an intermediary OsString is used to avoid `PathBuf::push()` logic which will otherwise overwrite the prefix with a subsequent absolute path
     let mut verbatim_path_os = std::ffi::OsString::from(r"\\?\");
-    verbatim_path_os.push(absolute_path.as_os_str());
+    let absolute_path_os = absolute_path.as_os_str();
+    let mut absolute_path_components = absolute_path.components();
+    match absolute_path_components.nth(0) {
+        Some(std::path::Component::Prefix(c)) if matches!(c.kind(), std::path::Prefix::UNC(..)) => {
+            if let std::path::Prefix::UNC(server, share) = c.kind() {
+                verbatim_path_os.push(r"UNC\");
+                verbatim_path_os.push(server);
+                verbatim_path_os.push(r"\");
+                verbatim_path_os.push(share);
+                verbatim_path_os.push(absolute_path_components);
+            }
+        }
+        _ => {
+            verbatim_path_os.push(absolute_path_os);
+        }
+    }
     let verbatim_path = std::path::PathBuf::from(verbatim_path_os);
     // eprintln!("to_verbatim_path() ~ verbatim_path: {:#?}", verbatim_path);
     return Ok(verbatim_path);
