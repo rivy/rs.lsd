@@ -55,22 +55,22 @@ where
     // add verbatim prefix (`\\?\`) to path
     // * an intermediary OsString is used to avoid `PathBuf::push()` logic which will otherwise overwrite the prefix with a subsequent absolute path
     let mut verbatim_path_os = std::ffi::OsString::from(r"\\?\");
-    let absolute_path_os = absolute_path.as_os_str();
-    let mut absolute_path_components = absolute_path.components();
-    match absolute_path_components.nth(0) {
-        Some(std::path::Component::Prefix(c)) if matches!(c.kind(), std::path::Prefix::UNC(..)) => {
-            if let std::path::Prefix::UNC(server, share) = c.kind() {
-                verbatim_path_os.push(r"UNC\");
-                verbatim_path_os.push(server);
-                verbatim_path_os.push(r"\");
-                verbatim_path_os.push(share);
-                verbatim_path_os.push(absolute_path_components);
-            }
-        }
-        _ => {
-            verbatim_path_os.push(absolute_path_os);
+    let mut components = absolute_path.components();
+
+    // * special handling is required for paths with a UNC (`\\server\share`) prefix
+    if let Some(std::path::Component::Prefix(prefix)) = components.next() {
+        if let std::path::Prefix::UNC(server, share) = prefix.kind() {
+            verbatim_path_os.push(r"UNC\");
+            verbatim_path_os.push(server);
+            verbatim_path_os.push(r"\");
+            verbatim_path_os.push(share);
+        } else {
+            verbatim_path_os.push(prefix.as_os_str());
         }
     }
+
+    verbatim_path_os.push(components);
+
     let verbatim_path = std::path::PathBuf::from(verbatim_path_os);
     // eprintln!("to_verbatim_path() ~ verbatim_path: {:#?}", verbatim_path);
     return Ok(verbatim_path);
