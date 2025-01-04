@@ -39,6 +39,7 @@ impl Name {
             .extension()
             .map(|ext| ext.to_string_lossy().to_string());
 
+        // eprintln!("Name::new ~ path: {:#?} ; name: {:#?}", path, name);
         Self {
             name,
             path: PathBuf::from(path),
