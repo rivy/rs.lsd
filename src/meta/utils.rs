@@ -1,9 +1,12 @@
 // use std::io;
 // use std::path;
 
-pub fn to_absolute_path<P>(path: P) -> std::io::Result<std::path::PathBuf>
+type PathStr = std::path::Path;
+type PathString = std::path::PathBuf;
+
+pub fn to_absolute_path<P>(path: P) -> std::io::Result<PathString>
 where
-    P: AsRef<std::path::Path>,
+    P: AsRef<PathStr>,
 {
     let path = path.as_ref();
     if !cfg!(windows) {
@@ -17,9 +20,9 @@ where
     return std::path::absolute(path_protected);
 }
 
-pub fn to_verbatim_path<P>(path: P) -> std::io::Result<std::path::PathBuf>
+pub fn to_verbatim_path<P>(path: P) -> std::io::Result<PathString>
 where
-    P: AsRef<std::path::Path>,
+    P: AsRef<PathStr>,
 {
     // convert path to a verbatim format (`\\?\...`), avoiding rust std library mis-handling of "device"-similar file paths
     // * eg, `CON` or `./CON` is translated to `\\?\C:\...\CON` (as opposed to the usual rust std library translation to `\\.\CON`)
@@ -64,14 +67,14 @@ where
             match prefix.kind() {
                 std::path::Prefix::DeviceNS(device) => {
                     prefix_os.push(device);
-                    let path = std::path::Path::new(&prefix_os);
+                    let path = PathStr::new(&prefix_os);
                     path.join(components).as_os_str().to_os_string()
                 }
                 std::path::Prefix::Disk(_disk) => {
                     // prefix_os.push(char::from(disk).to_string());
                     // prefix_os.push(r":");
                     prefix_os.push(prefix.as_os_str());
-                    let path = std::path::Path::new(&prefix_os);
+                    let path = PathStr::new(&prefix_os);
                     path.join(components).as_os_str().to_os_string()
                 }
                 std::path::Prefix::UNC(server, share) => {
@@ -79,12 +82,12 @@ where
                     prefix_os.push(server);
                     prefix_os.push(r"\");
                     prefix_os.push(share);
-                    let path = std::path::Path::new(&prefix_os);
+                    let path = PathStr::new(&prefix_os);
                     // valid verbatim paths must have at least one component after the prefix; `\\server\share` *may* sometimes be missing any further components
                     let mut residual_path = components.as_path();
-                    if residual_path == std::path::Path::new("") {
+                    if residual_path == PathStr::new("") {
                         // * add a `RootDir` if no other components (of `absolute_path`) exist
-                        residual_path = std::path::Path::new(r"\");
+                        residual_path = PathStr::new(r"\");
                     }
                     path.join(residual_path).as_os_str().to_os_string()
                 }
@@ -93,7 +96,7 @@ where
                     // valid verbatim paths must have at least one component after the prefix; `\\?\UNC\server\share` *may* be constructed to be missing any further components
                     let path = if components.next().is_none() {
                         // * add a `RootDir` if no other components (of `absolute_path`) exist
-                        std::path::Path::new(&absolute_path).join(r"\")
+                        PathStr::new(&absolute_path).join(r"\")
                     } else {
                         absolute_path
                     };
@@ -109,15 +112,15 @@ where
         ),
     };
 
-    let verbatim_path = std::path::PathBuf::from(verbatim_path_os);
+    let verbatim_path = PathString::from(verbatim_path_os);
     // eprintln!("to_verbatim_path() ~ verbatim_path: {:#?}", verbatim_path);
     return Ok(verbatim_path);
 }
 
-pub fn relative_path<P1, P2>(path: P1, base_path: P2) -> std::path::PathBuf
+pub fn relative_path<P1, P2>(path: P1, base_path: P2) -> PathString
 where
-    P1: AsRef<std::path::Path>,
-    P2: AsRef<std::path::Path>,
+    P1: AsRef<PathStr>,
+    P2: AsRef<PathStr>,
 {
     let path = path.as_ref();
     let base_path = base_path.as_ref();
@@ -128,9 +131,7 @@ where
 
     // if (self.path == base_path) || (self.path == *PATHBUF_CURRENT_DIR) {
     if path == base_path {
-        return std::path::PathBuf::from(AsRef::<std::path::Path>::as_ref(
-            &std::path::Component::CurDir,
-        ));
+        return PathString::from(AsRef::<PathStr>::as_ref(&std::path::Component::CurDir));
     }
 
     let path_verbatim = to_verbatim_path(&path).expect("failed to convert self.path to verbatim");
@@ -139,9 +140,7 @@ where
         to_verbatim_path(&base_path).expect("failed to convert base_path to verbatim");
 
     if path_verbatim == base_path_verbatim {
-        return std::path::PathBuf::from(AsRef::<std::path::Path>::as_ref(
-            &std::path::Component::CurDir,
-        ));
+        return PathString::from(AsRef::<PathStr>::as_ref(&std::path::Component::CurDir));
     }
 
     let shared_components = path_verbatim
@@ -149,7 +148,7 @@ where
         .zip(base_path_verbatim.components())
         .take_while(|(target_component, base_component)| target_component == base_component)
         .map(|(component, _)| component);
-    let shared_path = shared_components.clone().collect::<std::path::PathBuf>();
+    let shared_path = shared_components.clone().collect::<PathString>();
 
     // eprintln!(
     //         "relative_path()\n~ path_verbatim: {:#?}\n~ base_path_verbatim: {:#?}\n~ shared_components: {:#?}\n~ shared_path: {:#?}",
