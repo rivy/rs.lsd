@@ -358,7 +358,7 @@ fn to_content_style(ls: &lscolors::Style) -> ContentStyle {
 mod tests {
     use super::Colors;
     use crate::color::ThemeOption;
-    use crate::theme::color::ColorTheme;
+    use crate::theme::{color::ColorTheme, Theme};
     #[test]
     fn test_color_new_no_color_theme() {
         assert!(Colors::new(ThemeOption::NoColor).theme.is_none());
@@ -366,6 +366,13 @@ mod tests {
 
     #[test]
     fn test_color_new_custom_theme() {
+        let is_ci = std::env::var("CI").is_ok();
+        let using_custom_colors = Theme::from_path::<ColorTheme>("colors").is_ok();
+        if !is_ci && using_custom_colors {
+            print!("skipping test; custom colors are being used");
+            return;
+        }
+
         assert_eq!(
             Colors::new(ThemeOption::Custom).theme,
             Some(ColorTheme::default_dark()),
@@ -374,6 +381,13 @@ mod tests {
 
     #[test]
     fn test_color_new_custom_no_file_theme() {
+        let is_ci = std::env::var("CI").is_ok();
+        let using_custom_colors = Theme::from_path::<ColorTheme>("colors").is_ok();
+        if !is_ci && using_custom_colors {
+            print!("skipping test; custom colors are being used");
+            return;
+        }
+
         assert_eq!(
             Colors::new(ThemeOption::Custom).theme,
             Some(ColorTheme::default_dark()),

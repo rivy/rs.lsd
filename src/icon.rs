@@ -77,6 +77,7 @@ mod test {
     use super::{IconTheme, Icons};
     use crate::flags::{IconOption, IconTheme as FlagTheme, PermissionFlag};
     use crate::meta::Meta;
+    use crate::theme::Theme;
     use std::fs::File;
     use tempfile::tempdir;
 
@@ -205,6 +206,13 @@ mod test {
 
     #[test]
     fn get_icon_by_name() {
+        let is_ci = std::env::var("CI").is_ok();
+        let using_custom_icons = Theme::from_path::<IconTheme>("icons").is_ok();
+        if !is_ci && using_custom_icons {
+            print!("skipping test; custom icons are being used");
+            return;
+        }
+
         let tmp_dir = tempdir().expect("failed to create temp dir");
 
         for (file_name, file_icon) in &IconTheme::get_default_icons_by_name() {
@@ -221,6 +229,12 @@ mod test {
 
     #[test]
     fn get_icon_by_extension() {
+        let is_ci = std::env::var("CI").is_ok();
+        let using_custom_icons = Theme::from_path::<IconTheme>("icons").is_ok();
+        if !is_ci && using_custom_icons {
+            print!("skipping test; custom icons are being used");
+            return;
+        }
         let tmp_dir = tempdir().expect("failed to create temp dir");
 
         for (ext, file_icon) in &IconTheme::get_default_icons_by_extension() {
