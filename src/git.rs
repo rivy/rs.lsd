@@ -216,6 +216,8 @@ mod tests {
 
         let _success = Command::new("git")
             .current_dir(root.path())
+            .stderr(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
             .arg("status")
             .status()
             .expect("Git status failed")
